@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bodensee grenzenlos</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="top">
+    <div>
+      <h1 data-i18n="app.title">Bodensee grenzenlos</h1>
+      <p class="tagline" data-i18n="app.tagline"></p>
+    </div>
+    <label class="lang">
+      <span class="sr-only" data-i18n="lang.label">Sprache</span>
+      <select id="lang">
+        <option value="de">Deutsch</option>
+        <option value="en">English</option>
+      </select>
+    </label>
+  </header>
+
+  <main class="layout">
+    <section class="panel">
+      <div class="tabs" role="tablist">
+        <button role="tab" id="tab-route" aria-selected="true" aria-controls="pane-route" data-i18n="tab.route">Verbindung</button>
+        <button role="tab" id="tab-tours" aria-selected="false" aria-controls="pane-tours">
+          <span data-i18n="tab.tours">Tagesausflüge</span> <span class="beta" data-i18n="tours.beta">Beta</span>
+        </button>
+      </div>
+
+      <form id="form" class="card" novalidate>
+        <div class="stops">
+          <label class="field">
+            <span data-i18n="form.from">Von</span>
+            <input id="from" list="stop-list" autocomplete="off" data-i18n-placeholder="form.stopPlaceholder">
+          </label>
+          <button type="button" id="swap" class="swap" data-i18n-aria="form.swap">⇅</button>
+          <label class="field">
+            <span data-i18n="form.to">Nach</span>
+            <input id="to" list="stop-list" autocomplete="off" data-i18n-placeholder="form.stopPlaceholder">
+          </label>
+          <datalist id="stop-list"></datalist>
+        </div>
+
+        <div class="row">
+          <label class="field"><span data-i18n="form.date">Datum</span><input type="date" id="date"></label>
+          <label class="field"><span data-i18n="form.time">Abfahrt ab</span><input type="time" id="time"></label>
+        </div>
+
+        <fieldset class="profile">
+          <legend data-i18n="form.profile">Was ist Ihnen wichtig?</legend>
+          <label class="choice">
+            <input type="radio" name="profile" value="fast" checked>
+            <span class="choice-box"><span class="choice-icon" aria-hidden="true">⚡</span>
+              <strong data-i18n="profile.fast">Schnell</strong><small data-i18n="profile.fastHint"></small></span>
+          </label>
+          <label class="choice">
+            <input type="radio" name="profile" value="scenic">
+            <span class="choice-box"><span class="choice-icon" aria-hidden="true">⛰️</span>
+              <strong data-i18n="profile.scenic">Schön</strong><small data-i18n="profile.scenicHint"></small></span>
+          </label>
+        </fieldset>
+
+        <fieldset class="party">
+          <legend data-i18n="party.title">Wer reist mit?</legend>
+          <div id="counters" class="counters"></div>
+          <label class="check" id="bike-legs-wrap" hidden>
+            <input type="checkbox" id="bike-legs"> <span data-i18n="form.bikeLegs"></span>
+          </label>
+        </fieldset>
+
+        <p id="form-error" class="error" role="alert" hidden></p>
+        <button type="submit" class="primary" id="search-btn" data-i18n="form.search">Verbindung suchen</button>
+      </form>
+
+      <div id="pane-route" role="tabpanel" aria-labelledby="tab-route">
+        <div id="results" aria-live="polite"></div>
+      </div>
+      <div id="pane-tours" role="tabpanel" aria-labelledby="tab-tours" hidden>
+        <p class="muted" data-i18n="tours.intro"></p>
+        <div id="tours"></div>
+        <div id="tour-result" aria-live="polite"></div>
+      </div>
+
+      <p class="disclaimer" data-i18n="disclaimer"></p>
+    </section>
+
+    <section class="map-wrap"><div id="map"></div></section>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
