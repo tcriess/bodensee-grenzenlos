@@ -60,3 +60,7 @@ Nächste Schritte:
 - Aussicht-Werte pro Streckenabschnitt statt pro Linie, ergänzt um Wetter und Sonnenuntergang
 - Tagestouren generieren statt kuratieren (Highlights + Zeitbudget)
 - Preise und Billett-Empfehlung, Barrierefreiheit (stufenlos, Kinderwagen)
+
+## Lizenz
+
+Code: [MIT](LICENSE). Fahrplandaten von Transitous und Kartendaten von OpenStreetMap unterliegen ihren eigenen Lizenzen.

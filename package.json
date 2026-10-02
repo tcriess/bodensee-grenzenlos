@@ -2,6 +2,7 @@
   "name": "bodensee-routing",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "description": "Cross-border public transport routing around Lake Constance (hackathon prototype)",
   "scripts": {
