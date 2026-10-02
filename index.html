@@ -40,61 +40,65 @@
         </button>
       </div>
 
-      <form id="form" class="card" novalidate>
-        <div class="stops">
-          <label class="field">
-            <span data-i18n="form.from">Von</span>
-            <input id="from" list="stop-list" autocomplete="off" data-i18n-placeholder="form.stopPlaceholder">
-          </label>
-          <button type="button" id="swap" class="swap" data-i18n-aria="form.swap">⇅</button>
-          <label class="field">
-            <span data-i18n="form.to">Nach</span>
-            <input id="to" list="stop-list" autocomplete="off" data-i18n-placeholder="form.stopPlaceholder">
-          </label>
-          <datalist id="stop-list"></datalist>
-        </div>
 
-        <div class="row">
-          <label class="field"><span data-i18n="form.date">Datum</span><input type="date" id="date"></label>
-          <label class="field"><span data-i18n="form.time">Abfahrt ab</span><input type="time" id="time"></label>
-        </div>
+      <div id="pane-route" class="pane" role="tabpanel" aria-labelledby="tab-route">
+        <form id="form" class="card" novalidate>
+          <div class="stops">
+            <label class="field">
+              <span data-i18n="form.from">Von</span>
+              <input id="from" list="stop-list" autocomplete="off" data-i18n-placeholder="form.stopPlaceholder">
+            </label>
+            <button type="button" id="swap" class="swap" data-i18n-aria="form.swap">⇅</button>
+            <label class="field">
+              <span data-i18n="form.to">Nach</span>
+              <input id="to" list="stop-list" autocomplete="off" data-i18n-placeholder="form.stopPlaceholder">
+            </label>
+            <datalist id="stop-list"></datalist>
+          </div>
 
-        <fieldset class="profile">
-          <legend data-i18n="form.profile">Was ist Ihnen wichtig?</legend>
-          <label class="choice">
-            <input type="radio" name="profile" value="fast" checked>
-            <span class="choice-box"><span class="choice-icon" aria-hidden="true">⚡</span>
-              <strong data-i18n="profile.fast">Schnell</strong><small data-i18n="profile.fastHint"></small></span>
-          </label>
-          <label class="choice">
-            <input type="radio" name="profile" value="scenic">
-            <span class="choice-box"><span class="choice-icon" aria-hidden="true">⛰️</span>
-              <strong data-i18n="profile.scenic">Schön</strong><small data-i18n="profile.scenicHint"></small></span>
-          </label>
-        </fieldset>
+          <div class="row">
+            <label class="field"><span data-i18n="form.date">Datum</span><input type="date" id="date"></label>
+            <label class="field"><span data-i18n="form.time">Abfahrt ab</span><input type="time" id="time"></label>
+          </div>
 
-        <fieldset class="party">
-          <legend data-i18n="party.title">Wer reist mit?</legend>
-          <div id="counters" class="counters"></div>
-          <label class="check" id="bike-legs-wrap" hidden>
-            <input type="checkbox" id="bike-legs"> <span data-i18n="form.bikeLegs"></span>
-          </label>
-          <label class="check">
-            <input type="checkbox" id="step-free"> <span data-i18n="form.stepFree"></span>
-          </label>
-        </fieldset>
+          <fieldset class="profile">
+            <legend data-i18n="form.profile">Was ist Ihnen wichtig?</legend>
+            <label class="choice">
+              <input type="radio" name="profile" value="fast" checked>
+              <span class="choice-box"><span class="choice-icon" aria-hidden="true">⚡</span>
+                <strong data-i18n="profile.fast">Schnell</strong><small data-i18n="profile.fastHint"></small></span>
+            </label>
+            <label class="choice">
+              <input type="radio" name="profile" value="scenic">
+              <span class="choice-box"><span class="choice-icon" aria-hidden="true">⛰️</span>
+                <strong data-i18n="profile.scenic">Schön</strong><small data-i18n="profile.scenicHint"></small></span>
+            </label>
+          </fieldset>
 
-        <p id="form-error" class="error" role="alert" hidden></p>
-        <button type="submit" class="primary" id="search-btn" data-i18n="form.search">Verbindung suchen</button>
-      </form>
+          <fieldset class="party">
+            <legend data-i18n="party.title">Wer reist mit?</legend>
+            <div id="counters" class="counters"></div>
+            <label class="check" id="bike-legs-wrap" hidden>
+              <input type="checkbox" id="bike-legs"> <span data-i18n="form.bikeLegs"></span>
+            </label>
+            <label class="check">
+              <input type="checkbox" id="step-free"> <span data-i18n="form.stepFree"></span>
+            </label>
+          </fieldset>
 
-      <div id="pane-route" role="tabpanel" aria-labelledby="tab-route">
+          <p id="form-error" class="error" role="alert" hidden></p>
+          <button type="submit" class="primary" id="search-btn" data-i18n="form.search">Verbindung suchen</button>
+        </form>
         <div id="results" aria-live="polite"></div>
       </div>
-      <div id="pane-tours" role="tabpanel" aria-labelledby="tab-tours" hidden>
+      <div id="pane-tours" class="pane" role="tabpanel" aria-labelledby="tab-tours" hidden>
         <p class="muted" data-i18n="tours.intro"></p>
-        <div id="tours"></div>
+        <div class="card tour-context">
+          <span id="tour-context"></span>
+          <button type="button" class="link" id="tour-adjust" data-i18n="tours.adjust">Anpassen</button>
+        </div>
         <div id="tour-result" aria-live="polite"></div>
+        <div id="tours"></div>
       </div>
 
       <p class="disclaimer" id="attribution"></p>

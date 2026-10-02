@@ -149,6 +149,10 @@ details ol { margin: 4px 0 0; padding-left: 18px; font-size: .85rem; color: var(
 .notices-title { font-weight: 700; margin: 0 0 4px; font-size: .9rem; }
 .alt { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--surface-2); border-radius: 12px; padding: 10px 12px; font-size: .9rem; }
 
+.pane { display: flex; flex-direction: column; gap: 14px; }
+.pane[hidden] { display: none; }
+.tour-context { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px; font-size: .92rem; }
+.link { border: 0; background: none; padding: 0; color: var(--accent); font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; }
 .tour-card { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
 .tour-card h3 { margin: 0; font-size: 1.05rem; }
 .tour-card p { margin: 0; color: var(--muted); font-size: .9rem; }

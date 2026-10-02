@@ -4,7 +4,7 @@ import { parseHM } from './router.js';
 import { planJourney, planTourJourney } from './planner.js';
 import { searchStops } from './providers/transitous.js';
 import { dedupeNotices, distanceKm } from './journey.js';
-import { t, pick, setLang, getLang, applyStatic } from './i18n.js';
+import { t, pick, setLang, getLang, applyStatic, intlLocale } from './i18n.js';
 
 const { STOPS } = network;
 
@@ -291,8 +291,10 @@ $('tours').addEventListener('click', e => {
 
 async function runTour(tour) {
   const q = readQuery();
-  if (q.party.adults + q.party.kids < 1) return showError('error.noTraveller');
-  showError(null);
+  if (q.party.adults + q.party.kids < 1) {
+    $('tour-result').innerHTML = `<div class="card"><p class="error">${esc(t('error.noTraveller'))}</p></div>`;
+    return;
+  }
   const stops = tour.waypoints.map(w => ({ place: demoPlace(w.stop), stay: w.stay }));
   const home = q.from && !stops.some(w => distanceKm(w.place, q.from) < 1) ? q.from : null;
   const waypoints = home ? [{ place: home }, ...stops, { place: home }] : stops;
@@ -329,6 +331,16 @@ function renderTour(tour, home, plan) {
   </article>`;
   drawRoutes(plan.segments.map(s => s.route));
 }
+
+// Tours reuse date, group and "From" of the journey tab; this line makes that visible.
+function renderTourContext() {
+  const q = readQuery();
+  const date = q.date.toLocaleDateString(intlLocale(), { weekday: 'short', day: 'numeric', month: 'long' });
+  const start = q.from ? t('tours.contextFrom', { stop: q.from.label, time: $('time').value }) : t('tours.contextAtSite');
+  const party = PARTY.filter(p => q.party[p.key] > 0).map(p => `${p.icon} ${q.party[p.key]}`).join('  ') + (q.stepFree ? '  ♿' : '');
+  $('tour-context').textContent = t('tours.context', { date, start, party });
+}
+$('tour-adjust').addEventListener('click', () => { selectTab('route'); $('from').focus(); });
 
 // ---------- Shareable URL ----------
 function writeUrl(q, tourId) {
@@ -372,6 +384,7 @@ function selectTab(name) {
     $(`tab-${n}`).setAttribute('aria-selected', String(n === name));
     $(`pane-${n}`).hidden = n !== name;
   }
+  if (name === 'tours') renderTourContext();
 }
 $('tab-route').addEventListener('click', () => selectTab('route'));
 $('tab-tours').addEventListener('click', () => selectTab('tours'));
@@ -441,6 +454,7 @@ function applyLanguage(lang) {
   setOptions(demoMatches(''));
   renderCounters();
   renderTours();
+  renderTourContext();
   renderAttribution();
   state.lastRender?.();
 }
