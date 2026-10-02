@@ -153,6 +153,21 @@ details ol { margin: 4px 0 0; padding-left: 18px; font-size: .85rem; color: var(
 .pane[hidden] { display: none; }
 .tour-context { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px; font-size: .92rem; }
 .link { border: 0; background: none; padding: 0; color: var(--accent); font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; }
+.loop-form { display: flex; flex-direction: column; gap: 14px; }
+.loop-form .tour-context { padding: 0; }
+.segmented { display: flex; flex-wrap: wrap; gap: 6px; }
+.segmented legend { width: 100%; }
+.segmented label { flex: 1; min-width: 0; }
+.segmented input { position: absolute; opacity: 0; }
+.segmented span {
+  display: block; text-align: center; padding: 9px 8px; border: 2px solid var(--border); border-radius: 10px;
+  background: var(--surface); cursor: pointer; font-size: .9rem; font-weight: 600;
+}
+.segmented input:checked + span { border-color: var(--accent); background: var(--accent-soft); }
+.segmented input:focus-visible + span { outline: 3px solid var(--accent-soft); }
+.day-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 6px; margin: 0; padding-top: 6px; border-top: 1px solid var(--border); }
+.day-head:first-of-type { border-top: 0; }
+.night { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); font-weight: 600; }
 .tour-card { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
 .tour-card h3 { margin: 0; font-size: 1.05rem; }
 .tour-card p { margin: 0; color: var(--muted); font-size: .9rem; }

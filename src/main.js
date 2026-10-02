@@ -2,6 +2,7 @@ import * as network from './data/network.js';
 import { TOURS } from './data/tours.js';
 import { parseHM } from './router.js';
 import { planJourney, planTourJourney } from './planner.js';
+import { planLoop } from './loop.js';
 import { searchStops } from './providers/transitous.js';
 import { dedupeNotices, distanceKm } from './journey.js';
 import { t, pick, setLang, getLang, applyStatic, intlLocale } from './i18n.js';
@@ -332,19 +333,108 @@ function renderTour(tour, home, plan) {
   drawRoutes(plan.segments.map(s => s.route));
 }
 
-// Tours reuse date, group and "From" of the journey tab; this line makes that visible.
-function renderTourContext() {
+// Tours and loops reuse date, group and "From" of the journey tab; these lines make that visible.
+const fmtDate = (date, opts = { weekday: 'short', day: 'numeric', month: 'long' }) => date.toLocaleDateString(intlLocale(), opts);
+const partyText = q => PARTY.filter(p => q.party[p.key] > 0).map(p => `${p.icon} ${q.party[p.key]}`).join('  ') + (q.stepFree ? '  ♿' : '');
+function renderContexts() {
   const q = readQuery();
-  const date = q.date.toLocaleDateString(intlLocale(), { weekday: 'short', day: 'numeric', month: 'long' });
   const start = q.from ? t('tours.contextFrom', { stop: q.from.label, time: $('time').value }) : t('tours.contextAtSite');
-  const party = PARTY.filter(p => q.party[p.key] > 0).map(p => `${p.icon} ${q.party[p.key]}`).join('  ') + (q.stepFree ? '  ♿' : '');
-  $('tour-context').textContent = t('tours.context', { date, start, party });
+  $('tour-context').textContent = t('tours.context', { date: fmtDate(q.date), start, party: partyText(q) });
+  $('loop-context').textContent = t('loop.context', { date: fmtDate(q.date), time: $('time').value, party: partyText(q) });
 }
-$('tour-adjust').addEventListener('click', () => { selectTab('route'); $('from').focus(); });
+document.querySelectorAll('[data-adjust]').forEach(btn => btn.addEventListener('click', () => { selectTab('route'); $('from').focus(); }));
+
+// ---------- Lake loop ----------
+const radioValue = name => document.querySelector(`input[name="${name}"]:checked`).value;
+const setRadio = (name, value) => {
+  const input = document.querySelector(`input[name="${name}"][value="${value}"]`);
+  if (input) input.checked = true;
+};
+function readLoop() {
+  return {
+    start: resolvePlace($('loop-start').value),
+    loop: radioValue('loop-size'), days: Number(radioValue('loop-days')),
+    bike: radioValue('loop-bike'), direction: radioValue('loop-dir'),
+  };
+}
+for (const id of ['loop-start']) $(id).addEventListener('input', e => suggest(e.target.value));
+$('loop-form').addEventListener('submit', e => { e.preventDefault(); runLoop(); });
+
+async function runLoop() {
+  const opts = readLoop();
+  const q = readQuery();
+  const fail = key => { $('loop-error').hidden = false; $('loop-error').textContent = t(key); };
+  if (!opts.start) return fail('error.stopUnknown');
+  if (q.party.adults + q.party.kids < 1) return fail('error.noTraveller');
+  $('loop-error').hidden = true;
+  writeUrl(q, null, opts);
+
+  const signal = newController();
+  $('loop-btn').disabled = true;
+  $('loop-result').innerHTML = loadingHtml();
+  const show = (result, done) => {
+    state.lastRender = () => renderLoop(opts, q, result, done);
+    state.lastRender();
+  };
+  try {
+    show(await planLoop(state.source, opts, q, signal, partial => show(partial, false)), true);
+  } catch (e) {
+    if (e.name !== 'AbortError') { console.error(e); $('loop-result').innerHTML = `<div class="card"><p class="error">${esc(t('error.noRoute'))}</p></div>`; }
+  } finally {
+    if (!signal.aborted) $('loop-btn').disabled = false;
+  }
+}
+
+function renderLoop(opts, q, result, done) {
+  const allRoutes = result.days.flatMap(d => d.segments.map(s => s.route));
+  const countries = [...new Set(allRoutes.flatMap(r => r.countries))];
+  const notices = dedupeNotices(allRoutes.flatMap(r => r.notices));
+  const warnings = [
+    result.tooMuchBike && t('loop.tooMuchBike'),
+    result.late && t('loop.late'),
+    opts.bike !== 'none' && q.party.bikes < q.party.adults + q.party.kids && t('loop.bikeAssumed'),
+  ].filter(Boolean);
+
+  const days = result.days.map((day, d) => {
+    const first = day.segments[0]?.route, last = day.segments.at(-1)?.route;
+    const parts = day.segments.map(seg => `${seg.fallback ? `<p class="banner">${esc(t('tours.segmentFallback'))}</p>` : ''}${
+      routeHtml(seg.route, { compact: true })}${
+      seg.stay ? `<div class="stay">📍 ${esc(t('tours.stay', { duration: fmtDuration(seg.stay), stop: seg.at.label }))}</div>` : ''}`).join('');
+    return `<h4 class="day-head"><span>${esc(t('loop.day', { n: d + 1, date: fmtDate(day.date) }))}</span>
+        <span class="summary-dur">${first ? `${fmtTime(first.dep)} – ${fmtTime(last.arr)}` : ''}${day.bikeKm ? ` · ${esc(t('loop.dayBike', { km: day.bikeKm }))}` : ''}</span></h4>
+      ${parts}
+      ${day.overnight ? `<div class="night">🌙 ${esc(t('loop.night', { stop: day.overnight.label }))}</div>` : ''}`;
+  }).join('');
+
+  const pending = !done && !result.failedAt
+    ? `<p class="muted loading-inline"><span class="spinner" aria-hidden="true"></span>${esc(t('loop.planning', { n: result.days.length + 1 }))}</p>` : '';
+  const failed = result.failedAt
+    ? `<p class="error">${esc(t('loop.failed', { stop: result.failedAt.place.label, n: result.failedAt.day + 1 }))}</p>` : '';
+
+  $('loop-result').innerHTML = `<article class="card result">
+    <h3 style="margin:0">${esc(t('loop.title', { stop: opts.start.label }))}</h3>
+    <div class="facts">
+      <span class="chip">${esc(t(`loop.size.${opts.loop}`))} · ${esc(t(`loop.days.${opts.days}`))}</span>
+      <span class="chip">${countries.map(flag).join(' ')}</span>
+      <span class="chip">${esc(result.bikeKm ? t('loop.summaryBike', { km: result.bikeKm }) : t('loop.summaryTransit'))}</span>
+    </div>
+    ${warnings.map(w => `<p class="banner">${esc(w)}</p>`).join('')}
+    ${days}${pending}${failed}
+    ${done ? noticesHtml(notices) : ''}
+  </article>`;
+  drawRoutes(allRoutes, result.days.filter(d => d.overnight).map(d => d.overnight));
+}
 
 // ---------- Shareable URL ----------
-function writeUrl(q, tourId) {
+function writeUrl(q, tourId, loop) {
   const p = new URLSearchParams();
+  if (loop) {
+    p.set('loop', loop.loop);
+    p.set('start', placeToParam(loop.start));
+    p.set('days', loop.days);
+    p.set('bike', loop.bike);
+    p.set('dir', loop.direction);
+  }
   if (q.from) p.set('from', placeToParam(q.from));
   if (q.to) p.set('to', placeToParam(q.to));
   p.set('date', $('date').value);
@@ -373,6 +463,15 @@ function readUrl() {
   }
   $('bike-legs').checked = p.get('bikeLegs') === '1';
   $('step-free').checked = p.get('stepFree') === '1';
+  const start = placeFromParam(p.get('start'));
+  if (start) $('loop-start').value = start.label;
+  if (p.get('loop')) {
+    setRadio('loop-size', p.get('loop'));
+    setRadio('loop-days', p.get('days'));
+    setRadio('loop-bike', p.get('bike'));
+    setRadio('loop-dir', p.get('dir'));
+    if (start) return () => { selectTab('loop'); runLoop(); };
+  }
   const tour = TOURS.find(x => x.id === p.get('tour'));
   if (tour) return () => { selectTab('tours'); runTour(tour); };
   return from && to ? () => runSearch() : null;
@@ -380,14 +479,14 @@ function readUrl() {
 
 // ---------- Tabs ----------
 function selectTab(name) {
-  for (const n of ['route', 'tours']) {
+  for (const n of ['route', 'tours', 'loop']) {
     $(`tab-${n}`).setAttribute('aria-selected', String(n === name));
     $(`pane-${n}`).hidden = n !== name;
   }
-  if (name === 'tours') renderTourContext();
+  if (name === 'loop' && !$('loop-start').value) $('loop-start').value = $('from').value;
+  if (name !== 'route') renderContexts();
 }
-$('tab-route').addEventListener('click', () => selectTab('route'));
-$('tab-tours').addEventListener('click', () => selectTab('tours'));
+for (const n of ['route', 'tours', 'loop']) $(`tab-${n}`).addEventListener('click', () => selectTab(n));
 
 // ---------- Map ----------
 let map, routeLayer, networkLayer;
@@ -424,10 +523,12 @@ function updateNetworkLayer() {
   // The demo network lines would be misleading next to real timetables.
   if (state.source === 'demo') networkLayer.addTo(map); else networkLayer.remove();
 }
-function drawRoutes(routes) {
+function drawRoutes(routes, overnights = []) {
   if (!map) return;
   routeLayer.clearLayers();
   const bounds = [];
+  overnights.forEach((p, i) => L.marker([p.lat, p.lon], { title: t('loop.night', { stop: p.label }) })
+    .bindTooltip(`🌙 ${i + 1}`, { permanent: true, direction: 'top' }).addTo(routeLayer));
   for (const r of routes) {
     for (const leg of r.legs) {
       const coords = leg.geometry?.length ? leg.geometry : leg.stops.map(s => [s.lat, s.lon]);
@@ -454,7 +555,7 @@ function applyLanguage(lang) {
   setOptions(demoMatches(''));
   renderCounters();
   renderTours();
-  renderTourContext();
+  renderContexts();
   renderAttribution();
   state.lastRender?.();
 }

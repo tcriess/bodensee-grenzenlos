@@ -38,6 +38,9 @@
         <button role="tab" id="tab-tours" aria-selected="false" aria-controls="pane-tours">
           <span data-i18n="tab.tours">Tagesausflüge</span> <span class="beta" data-i18n="tours.beta">Beta</span>
         </button>
+        <button role="tab" id="tab-loop" aria-selected="false" aria-controls="pane-loop">
+          <span data-i18n="tab.loop">Seerunde</span> <span class="beta" data-i18n="tours.beta">Beta</span>
+        </button>
       </div>
 
 
@@ -95,10 +98,49 @@
         <p class="muted" data-i18n="tours.intro"></p>
         <div class="card tour-context">
           <span id="tour-context"></span>
-          <button type="button" class="link" id="tour-adjust" data-i18n="tours.adjust">Anpassen</button>
+          <button type="button" class="link" data-adjust data-i18n="tours.adjust">Anpassen</button>
         </div>
         <div id="tour-result" aria-live="polite"></div>
         <div id="tours"></div>
+      </div>
+
+      <div id="pane-loop" class="pane" role="tabpanel" aria-labelledby="tab-loop" hidden>
+        <p class="muted" data-i18n="loop.intro"></p>
+        <form id="loop-form" class="card loop-form" novalidate>
+          <label class="field">
+            <span data-i18n="loop.start">Start und Ziel</span>
+            <input id="loop-start" list="stop-list" autocomplete="off" data-i18n-placeholder="form.stopPlaceholder">
+          </label>
+          <fieldset class="segmented">
+            <legend data-i18n="loop.size"></legend>
+            <label><input type="radio" name="loop-size" value="obersee" checked><span data-i18n="loop.size.obersee"></span></label>
+            <label><input type="radio" name="loop-size" value="full"><span data-i18n="loop.size.full"></span></label>
+          </fieldset>
+          <fieldset class="segmented">
+            <legend data-i18n="loop.days"></legend>
+            <label><input type="radio" name="loop-days" value="1" checked><span data-i18n="loop.days.1"></span></label>
+            <label><input type="radio" name="loop-days" value="2"><span data-i18n="loop.days.2"></span></label>
+            <label><input type="radio" name="loop-days" value="3"><span data-i18n="loop.days.3"></span></label>
+          </fieldset>
+          <fieldset class="segmented">
+            <legend data-i18n="loop.bike"></legend>
+            <label><input type="radio" name="loop-bike" value="none" checked><span data-i18n="loop.bike.none"></span></label>
+            <label><input type="radio" name="loop-bike" value="some"><span data-i18n="loop.bike.some"></span></label>
+            <label><input type="radio" name="loop-bike" value="most"><span data-i18n="loop.bike.most"></span></label>
+          </fieldset>
+          <fieldset class="segmented">
+            <legend data-i18n="loop.direction"></legend>
+            <label><input type="radio" name="loop-dir" value="cw" checked><span data-i18n="loop.direction.cw"></span></label>
+            <label><input type="radio" name="loop-dir" value="ccw"><span data-i18n="loop.direction.ccw"></span></label>
+          </fieldset>
+          <div class="tour-context">
+            <span id="loop-context"></span>
+            <button type="button" class="link" data-adjust data-i18n="tours.adjust">Anpassen</button>
+          </div>
+          <p id="loop-error" class="error" role="alert" hidden></p>
+          <button type="submit" class="primary" id="loop-btn" data-i18n="loop.plan">Runde planen</button>
+        </form>
+        <div id="loop-result" aria-live="polite"></div>
       </div>
 
       <p class="disclaimer" id="attribution"></p>

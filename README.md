@@ -35,6 +35,7 @@ Teilbare Links, z. B.:
 - **Reisegruppe**: Erwachsene, Kinder, Hunde, Velos, dazu «stufenlos» (Rollstuhl/Kinderwagen; mit echtem Fahrplan als `pedestrianProfile=WHEELCHAIR`). Velos schliessen Linien ohne Velomitnahme aus. Fahren alle Personen Velo, sind Teilstrecken auf dem Bodensee-Radweg möglich. Daraus ergeben sich passende Hinweise: Velo-Reservation, Hundebillett, Heimtierausweis an der EU-Aussengrenze, Zoll, Gruppenbillett, Bodensee Ticket.
 - **Grenzübertritte** werden pro Teilstrecke angezeigt.
 - **Tagesausflüge (Beta)**: kuratierte Touren mit Aufenthaltszeiten, auf Wunsch ab dem eigenen «Von»-Ort und zurück.
+- **Seerunde (Beta)**: einmal rund um den Obersee oder den ganzen See (mit Überlinger See und Untersee). Wählbar sind 1–3 Tage mit Übernachtungsorten, Velo (nur ÖV / ÖV + kurze Veloetappen bis 15 km / möglichst viel Velo) und die Richtung. Die Runde beginnt beim Uferort, der dem Start am nächsten liegt, sonst mit An- und Rückreise. Daten in `src/data/loops.js`, Logik in `src/loop.js`. Teilen per Link, z. B. `/?loop=obersee&start=konstanz&days=2&bike=some&dir=cw`.
 - **i18n**: `src/locales/*.js` (de-CH als Fallback, en). Für eine neue Sprache die Datei kopieren und in `src/i18n.js` registrieren.
 
 ## Aufbau
@@ -43,6 +44,7 @@ Teilbare Links, z. B.:
 |---|---|
 | `src/data/network.js` | Haltestellen, Linien (Takt, Fahrzeiten, Saison, Velo, Aussicht), Fusswege, Radwege |
 | `src/data/tours.js` | Tagesausflüge |
+| `src/data/loops.js`, `src/loop.js` | Seerunde: Uferorte mit Radweg-km, Aufteilung auf Tage, Velo-Etappen |
 | `src/data/scenery.js`, `src/data/hubs.js` | Seeufer-Punkte und Schiffsanlegestellen für «Schön» |
 | `src/router.js` | Demo-Netz: zeitabhängige Suche (Label-Setting), Profile, Touren; ohne DOM |
 | `src/providers/transitous.js` | Transitous-Client: Abfragen, Umwandlung ins gemeinsame Modell, Auswahl schnell/schön |
