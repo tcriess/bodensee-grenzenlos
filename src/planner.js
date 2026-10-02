@@ -19,19 +19,23 @@ export async function planJourney(source, q, signal, onPartial) {
   return result && { ...result, fallback };
 }
 
+// Multi-stop plans must not silently roll over into the night or the next morning.
+export const MAX_WAIT = 120;
+export const fitsDay = (route, startMin) => route.dep - startMin <= MAX_WAIT && route.arr < 24 * 60;
+
 // One leg with real timetables, falling back to the demo network if that fails.
 export async function planSegment(source, q, signal) {
   if (source === 'live') {
     try {
       const route = await transitous.segment(q, signal);
-      if (route) return { route, fallback: false };
+      if (route && fitsDay(route, q.startMin)) return { route, fallback: false };
     } catch (e) {
       if (isAbort(e)) throw e;
       console.warn(e);
     }
   }
   const route = await demo.segment(q);
-  return route ? { route, fallback: source === 'live' } : null;
+  return route && fitsDay(route, q.startMin) ? { route, fallback: source === 'live' } : null;
 }
 
 // waypoints: [{ place, stay }]; each segment starts after the stay at the previous waypoint.
@@ -42,7 +46,7 @@ export async function planTourJourney(source, waypoints, q, signal) {
     const res = await planSegment(source, { ...q, from: waypoints[i - 1].place, to: waypoints[i].place, startMin: t }, signal);
     if (!res) return { segments, failedAt: waypoints[i].place };
     const stay = waypoints[i].stay ?? 0;
-    segments.push({ route: res.route, stay, at: waypoints[i].place, fallback: res.fallback });
+    segments.push({ route: res.route, stay, at: waypoints[i].place, fallback: res.fallback, readyAt: t });
     t = res.route.arr + stay;
   }
   return { segments, failedAt: null };

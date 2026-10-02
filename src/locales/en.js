@@ -137,5 +137,7 @@ export default {
   'loop.tooMuchBike': 'More than 80 km by bike in one day – plan more days for a relaxed loop.',
   'loop.late': 'At least one day ends late in the evening – consider more days.',
   'loop.bikeAssumed': 'A bike is assumed for every person on the cycling legs.',
+  'result.wait': '{duration} wait at {stop}',
+  'loop.moreDays': 'Plan with {n} days',
   'disclaimer': 'Prototype with a simplified, approximate timetable. Please check with SBB, DB, ÖBB or the boat operators before travelling.',
 };

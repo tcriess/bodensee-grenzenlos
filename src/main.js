@@ -34,6 +34,8 @@ const fmtTime = min => {
   const m = ((min % 1440) + 1440) % 1440;
   return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 };
+// Leg times past midnight get a "+1" so overnight waits cannot hide.
+const fmtLegTime = min => `${fmtTime(min)}${min >= 1440 ? '<sup>+1</sup>' : ''}`;
 const fmtDuration = min => {
   const h = Math.floor(min / 60), m = min % 60;
   return h ? `${h} h${m ? ` ${m} min` : ''}` : `${m} min`;
@@ -231,14 +233,14 @@ function legHtml(leg) {
   const between = leg.stops.slice(1, -1);
   const intermediate = between.length
     ? `<details><summary>${esc(t('leg.stops', { count: between.length }))}</summary><ol>${
-      between.map(s => `<li>${fmtTime(s.time)} ${esc(s.name)}</li>`).join('')}</ol></details>`
+      between.map(s => `<li>${fmtLegTime(s.time)} ${esc(s.name)}</li>`).join('')}</ol></details>`
     : '';
   const borders = (leg.crossings ?? []).map(c =>
     `<span class="border-cross">🛂 ${esc(t('leg.border', { from: t(`country.${c.from}`), to: t(`country.${c.to}`) }))}</span>`).join('');
   const delay = leg.delay > 0 ? ` <span class="delay">+${leg.delay}</span>` : '';
 
   return `<li class="leg">
-    <div class="leg-times"><span>${fmtTime(leg.dep)}${delay}</span><span>${fmtTime(leg.arr)}</span></div>
+    <div class="leg-times"><span>${fmtLegTime(leg.dep)}${delay}</span><span>${fmtLegTime(leg.arr)}</span></div>
     <div class="leg-bar ${!leg.line || mode === 'ship' ? 'dashed' : ''}" style="--c:${color}"></div>
     <div class="leg-body">
       <span class="leg-stop">${flag(leg.from.country)} ${esc(leg.from.name)}</span>
@@ -317,10 +319,17 @@ async function runTour(tour) {
   state.lastRender();
 }
 
-function renderTour(tour, home, plan) {
-  const parts = plan.segments.map(seg => `${seg.fallback ? `<p class="banner">${esc(t('tours.segmentFallback'))}</p>` : ''}${
+// Segments of multi-stop plans: waits above 20 min are shown explicitly, not hidden behind the planned stay.
+const segmentsHtml = segments => segments.map(seg => {
+  const wait = seg.readyAt === undefined ? 0 : seg.route.dep - seg.readyAt;
+  return `${wait >= 20 ? `<div class="wait">⏳ ${esc(t('result.wait', { duration: fmtDuration(wait), stop: seg.route.legs[0].from.name }))}</div>` : ''}${
+    seg.fallback ? `<p class="banner">${esc(t('tours.segmentFallback'))}</p>` : ''}${
     routeHtml(seg.route, { compact: true })}${
-    seg.stay ? `<div class="stay">📍 ${esc(t('tours.stay', { duration: fmtDuration(seg.stay), stop: seg.at.label }))}</div>` : ''}`);
+    seg.stay ? `<div class="stay">📍 ${esc(t('tours.stay', { duration: fmtDuration(seg.stay), stop: seg.at.label }))}</div>` : ''}`;
+});
+
+function renderTour(tour, home, plan) {
+  const parts = segmentsHtml(plan.segments);
   if (plan.failedAt) parts.push(`<p class="error">${esc(t('tours.failed', { stop: plan.failedAt.label }))}</p>`);
   const first = plan.segments[0]?.route, last = plan.segments.at(-1)?.route;
   $('tour-result').innerHTML = `<article class="card result">
@@ -359,6 +368,12 @@ function readLoop() {
 }
 for (const id of ['loop-start']) $(id).addEventListener('input', e => suggest(e.target.value));
 $('loop-form').addEventListener('submit', e => { e.preventDefault(); runLoop(); });
+$('loop-result').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-more-days]');
+  if (!btn) return;
+  setRadio('loop-days', btn.dataset.moreDays);
+  runLoop();
+});
 
 async function runLoop() {
   const opts = readLoop();
@@ -397,9 +412,7 @@ function renderLoop(opts, q, result, done) {
 
   const days = result.days.map((day, d) => {
     const first = day.segments[0]?.route, last = day.segments.at(-1)?.route;
-    const parts = day.segments.map(seg => `${seg.fallback ? `<p class="banner">${esc(t('tours.segmentFallback'))}</p>` : ''}${
-      routeHtml(seg.route, { compact: true })}${
-      seg.stay ? `<div class="stay">📍 ${esc(t('tours.stay', { duration: fmtDuration(seg.stay), stop: seg.at.label }))}</div>` : ''}`).join('');
+    const parts = segmentsHtml(day.segments).join('');
     return `<h4 class="day-head"><span>${esc(t('loop.day', { n: d + 1, date: fmtDate(day.date) }))}</span>
         <span class="summary-dur">${first ? `${fmtTime(first.dep)} – ${fmtTime(last.arr)}` : ''}${day.bikeKm ? ` · ${esc(t('loop.dayBike', { km: day.bikeKm }))}` : ''}</span></h4>
       ${parts}
@@ -409,7 +422,8 @@ function renderLoop(opts, q, result, done) {
   const pending = !done && !result.failedAt
     ? `<p class="muted loading-inline"><span class="spinner" aria-hidden="true"></span>${esc(t('loop.planning', { n: result.days.length + 1 }))}</p>` : '';
   const failed = result.failedAt
-    ? `<p class="error">${esc(t('loop.failed', { stop: result.failedAt.place.label, n: result.failedAt.day + 1 }))}</p>` : '';
+    ? `<p class="error">${esc(t('loop.failed', { stop: result.failedAt.place.label, n: result.failedAt.day + 1 }))}</p>${
+      opts.days < 3 ? `<button type="button" class="secondary" data-more-days="${opts.days + 1}">${esc(t('loop.moreDays', { n: opts.days + 1 }))}</button>` : ''}` : '';
 
   $('loop-result').innerHTML = `<article class="card result">
     <h3 style="margin:0">${esc(t('loop.title', { stop: opts.start.label }))}</h3>

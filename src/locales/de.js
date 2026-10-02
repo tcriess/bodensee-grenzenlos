@@ -138,5 +138,7 @@ export default {
   'loop.tooMuchBike': 'Mehr als 80 km Velo an einem Tag – für eine gemütliche Runde lieber mehr Tage einplanen.',
   'loop.late': 'Mindestens ein Tag endet erst spät am Abend – eventuell mehr Tage wählen.',
   'loop.bikeAssumed': 'Für die Velo-Etappen wird für jede Person ein Velo angenommen.',
+  'result.wait': '{duration} Wartezeit in {stop}',
+  'loop.moreDays': 'Mit {n} Tagen planen',
   'disclaimer': 'Prototyp mit vereinfachtem, ungefährem Fahrplan. Vor der Reise bitte bei SBB, DB, ÖBB oder den Schifffahrtsgesellschaften prüfen.',
 };

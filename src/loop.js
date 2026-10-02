@@ -90,7 +90,9 @@ export async function planLoop(source, opts, q, signal, onProgress) {
   const persons = q.party.adults + q.party.kids;
   const party = opts.bike === 'none' ? q.party : { ...q.party, bikes: Math.max(q.party.bikes, persons) };
   const ctx = { party, bikeLegs: opts.bike !== 'none', stepFree: q.stepFree };
-  const result = { days: [], bikeKm: 0, failedAt: null, tooMuchBike: false, late: false };
+  // Known before planning, so the warning also explains a day that cannot be completed.
+  const tooMuchBike = chunks.some(c => c.filter(s => s.mode === 'bike').reduce((km, s) => km + s.km, 0) > MAX_BIKE_KM_PER_DAY);
+  const result = { days: [], bikeKm: 0, failedAt: null, tooMuchBike, late: false };
 
   for (const [d, chunk] of chunks.entries()) {
     const date = new Date(q.date);
@@ -103,23 +105,20 @@ export async function planLoop(source, opts, q, signal, onProgress) {
       // No sightseeing stop at the overnight town: the evening is free anyway.
       const stay = i === chunk.length - 1 ? 0 : seg.stay;
       let route, fallback = false;
-      if (seg.mode === 'bike') {
-        route = bikeRoute(seg, t, ctx);
-        day.bikeKm += seg.km;
-      } else {
-        const res = await planSegment(source, { ...q, date, party, bikeLegs: false, from: seg.from, to: seg.to, startMin: t }, signal);
-        if (!res) {
-          result.failedAt = { day: d, place: seg.to };
-          onProgress?.(result);
-          return result;
-        }
-        ({ route, fallback } = res);
+      const res = seg.mode === 'bike'
+        ? { route: bikeRoute(seg, t, ctx), fallback: false }
+        : await planSegment(source, { ...q, date, party, bikeLegs: false, from: seg.from, to: seg.to, startMin: t }, signal);
+      if (!res || res.route.arr >= 24 * 60) {
+        result.failedAt = { day: d, place: seg.to };
+        onProgress?.(result);
+        return result;
       }
-      day.segments.push({ route, stay, at: seg.to, fallback });
+      ({ route, fallback } = res);
+      if (seg.mode === 'bike') day.bikeKm += seg.km;
+      day.segments.push({ route, stay, at: seg.to, fallback, readyAt: t });
       t = route.arr + stay;
     }
     result.bikeKm += day.bikeKm;
-    result.tooMuchBike ||= day.bikeKm > MAX_BIKE_KM_PER_DAY;
     result.late ||= t > LATE;
     onProgress?.(result);
   }

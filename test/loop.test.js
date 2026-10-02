@@ -59,3 +59,13 @@ test('flags too much cycling for a single day', async () => {
   const res = await planLoop('demo', { loop: 'full', start: place('konstanz'), direction: 'cw', bike: 'most', days: 1 }, q);
   assert.ok(res.tooMuchBike);
 });
+
+test('a loop that does not fit the day fails instead of rolling into the night', async () => {
+  const late = { ...q, startMin: 15 * 60 };
+  const res = await planLoop('demo', { loop: 'full', start: place('konstanz'), direction: 'cw', bike: 'none', days: 1 }, late);
+  assert.ok(res.failedAt);
+  for (const seg of res.days.flatMap(d => d.segments)) {
+    assert.ok(seg.route.arr < 24 * 60);
+    assert.ok(seg.route.dep - seg.readyAt <= 120);
+  }
+});
