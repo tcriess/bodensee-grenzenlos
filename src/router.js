@@ -1,4 +1,5 @@
 // Time-dependent label-setting search over a headway-based network. Pure module, no DOM.
+import { summarize } from './journey.js';
 
 export const MIN_TRANSFER = 4;
 const HORIZON = 26 * 60;
@@ -8,7 +9,6 @@ const PROFILES = {
   // Scenic lines get cheap so the search prefers ships and lake views as long as the deadline allows.
   scenic: { ride: s => 1.3 - s, wait: 0.6, transfer: 8, walk: 0.7, bike: 0.5 },
 };
-const SCENIC = { walk: 0.5, bike: 0.8 };
 
 export const parseHM = s => { const [h, m] = s.split(':').map(Number); return h * 60 + m; };
 
@@ -111,18 +111,18 @@ function unwind(label) {
   return legs;
 }
 
-export function makeContext({ date, party, bikeLegs }) {
+export function makeContext({ date, party, bikeLegs, stepFree = false }) {
   const persons = party.adults + party.kids;
   return {
-    date, party,
+    date, party, stepFree,
     bikeLegs: Boolean(bikeLegs) && party.bikes > 0 && party.bikes >= persons,
     lineAllowed: line => inSeason(line, date) && !(party.bikes > 0 && line.bikes === 'no'),
   };
 }
 
-export function planRoute(index, { from, to, date, startMin, profile = 'fast', party, bikeLegs = false }) {
+export function planRoute(index, { from, to, date, startMin, profile = 'fast', party, bikeLegs = false, stepFree = false }) {
   if (from === to) return null;
-  const ctx = makeContext({ date, party, bikeLegs });
+  const ctx = makeContext({ date, party, bikeLegs, stepFree });
   const fast = search(index, ctx, from, to, startMin, 'fast', Infinity);
   if (!fast) return null;
   if (profile === 'fast') return describe(index, fast, ctx, 'fast');
@@ -134,78 +134,21 @@ export function planRoute(index, { from, to, date, startMin, profile = 'fast', p
 }
 
 export function describe(index, legs, ctx, profile) {
-  const { stops } = index;
+  const place = id => ({ id, ...index.stops[id] });
   const out = legs.map(leg => {
-    const seq = leg.kind === 'ride'
-      ? leg.pattern.stops.slice(leg.fromIdx, leg.toIdx + 1).map((s, i) => ({
-        stop: s, time: leg.dep + leg.pattern.offs[leg.fromIdx + i] - leg.pattern.offs[leg.fromIdx],
-      }))
-      : [{ stop: leg.from, time: leg.dep }, { stop: leg.to, time: leg.arr }];
-    const crossings = [];
-    for (let i = 1; i < seq.length; i++) {
-      const a = stops[seq[i - 1].stop].country, b = stops[seq[i].stop].country;
-      if (a !== b) crossings.push({ from: a, to: b });
-    }
+    const ids = leg.kind === 'ride' ? leg.pattern.stops.slice(leg.fromIdx, leg.toIdx + 1) : [leg.from, leg.to];
+    const stops = ids.map((id, i) => ({
+      ...place(id),
+      time: leg.kind === 'ride' ? leg.dep + leg.pattern.offs[leg.fromIdx + i] - leg.pattern.offs[leg.fromIdx] : i ? leg.arr : leg.dep,
+    }));
     return {
       kind: leg.kind,
       line: leg.kind === 'ride' ? leg.pattern.line : null,
-      headsign: leg.kind === 'ride' ? leg.pattern.stops.at(-1) : null,
-      from: seq[0].stop, to: seq.at(-1).stop, dep: leg.dep, arr: leg.arr,
-      stops: seq, crossings, km: leg.km,
+      headsign: leg.kind === 'ride' ? index.stops[leg.pattern.stops.at(-1)].name : null,
+      from: stops[0], to: stops.at(-1), dep: leg.dep, arr: leg.arr, stops, km: leg.km,
     };
   });
-
-  const visited = [...new Set(out.flatMap(l => l.stops.map(s => s.stop)))];
-  let weighted = 0, moving = 0;
-  for (const l of out) {
-    const min = l.arr - l.dep;
-    weighted += min * (l.line ? l.line.scenic : SCENIC[l.kind]);
-    moving += min;
-  }
-  const rides = out.filter(l => l.kind === 'ride');
-  return {
-    profile, legs: out,
-    dep: out[0].dep, arr: out.at(-1).arr, duration: out.at(-1).arr - out[0].dep,
-    transfers: Math.max(0, out.length - 1),
-    countries: [...new Set(visited.map(s => stops[s].country))],
-    crossings: out.flatMap(l => l.crossings),
-    scenic: moving ? weighted / moving : 0,
-    highlights: visited.filter(s => stops[s].highlight).map(s => stops[s].highlight),
-    modes: [...new Set(out.map(l => l.line ? l.line.mode : l.kind))],
-    notices: notices(out, rides, ctx),
-  };
-}
-
-function notices(legs, rides, { party, bikeLegs }) {
-  const list = [];
-  const persons = party.adults + party.kids;
-  const crossings = legs.flatMap(l => l.crossings);
-  const nonEu = c => c === 'CH' || c === 'LI';
-  const customs = crossings.some(c => nonEu(c.from) !== nonEu(c.to));
-
-  if (party.bikes > 0) {
-    for (const l of rides) {
-      if (l.line.bikes === 'reservation') list.push({ key: 'notice.bikeReservation', params: { line: l.line.label } });
-      if (l.line.bikes === 'limited') list.push({ key: 'notice.bikeLimited', params: { line: l.line.label } });
-    }
-    if (party.bikes >= 3) list.push({ key: 'notice.bikeGroup', params: { count: party.bikes } });
-    if (bikeLegs && legs.some(l => l.kind === 'bike')) list.push({ key: 'notice.bikeLegs' });
-  }
-  for (const l of rides) if (l.line.season) list.push({ key: 'notice.seasonal', params: { line: l.line.name ?? l.line.label } });
-  if (party.dogs > 0) {
-    list.push({ key: 'notice.dogs' });
-    if (customs) list.push({ key: 'notice.dogBorder' });
-  }
-  if (party.kids > 0) list.push({ key: 'notice.kids' });
-  if (persons >= 10) list.push({ key: 'notice.group' });
-  if (customs) list.push({ key: 'notice.customs' });
-  if (crossings.length) list.push({ key: 'notice.bodenseeTicket' });
-
-  const seen = new Set();
-  return list.filter(n => {
-    const id = n.key + JSON.stringify(n.params ?? {});
-    return !seen.has(id) && seen.add(id);
-  });
+  return { ...summarize(out, ctx, profile), source: 'demo' };
 }
 
 // Chains scenic routes through waypoints; each waypoint has a stay in minutes before moving on.

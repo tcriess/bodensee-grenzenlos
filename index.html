@@ -13,13 +13,22 @@
       <h1 data-i18n="app.title">Bodensee grenzenlos</h1>
       <p class="tagline" data-i18n="app.tagline"></p>
     </div>
-    <label class="lang">
-      <span class="sr-only" data-i18n="lang.label">Sprache</span>
-      <select id="lang">
-        <option value="de">Deutsch</option>
-        <option value="en">English</option>
-      </select>
-    </label>
+    <div class="top-controls">
+      <label class="lang">
+        <span class="sr-only" data-i18n="source.label">Fahrplandaten</span>
+        <select id="source">
+          <option value="live" data-i18n="source.live">Echter Fahrplan</option>
+          <option value="demo" data-i18n="source.demo">Demo-Netz (offline)</option>
+        </select>
+      </label>
+      <label class="lang">
+        <span class="sr-only" data-i18n="lang.label">Sprache</span>
+        <select id="lang">
+          <option value="de">Deutsch</option>
+          <option value="en">English</option>
+        </select>
+      </label>
+    </div>
   </header>
 
   <main class="layout">
@@ -70,6 +79,9 @@
           <label class="check" id="bike-legs-wrap" hidden>
             <input type="checkbox" id="bike-legs"> <span data-i18n="form.bikeLegs"></span>
           </label>
+          <label class="check">
+            <input type="checkbox" id="step-free"> <span data-i18n="form.stepFree"></span>
+          </label>
         </fieldset>
 
         <p id="form-error" class="error" role="alert" hidden></p>
@@ -85,7 +97,7 @@
         <div id="tour-result" aria-live="polite"></div>
       </div>
 
-      <p class="disclaimer" data-i18n="disclaimer"></p>
+      <p class="disclaimer" id="attribution"></p>
     </section>
 
     <section class="map-wrap"><div id="map"></div></section>
